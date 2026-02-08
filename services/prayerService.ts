@@ -1,64 +1,18 @@
 import { AppData, Mosque, PrayerContext } from '../types';
 
-// Access environment variables safely
-const APPS_SCRIPT_URL = import.meta.env?.VITE_APPS_SCRIPT_URL;
-const SECRET_KEY = import.meta.env?.VITE_SECRET_KEY;
-
-// Fallback URL (Public Google Sheet CSV) for when secrets are not configured
-const BACKUP_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
+// Hardcoded Configuration
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwYQE9d0cQEkusPsXqlMpRF7puGHMwKRAeTTxXtBuJbCCMHSVIJyKA5s683jqpvF2wY/exec';
+const SECRET_KEY = 'U%A9*oTd4gyUW$qzSyJL';
+// Fallback: Direct Google Sheet CSV (Robust against CORS/Script errors)
+const DIRECT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
-    // Check if secure configuration exists
-    const useSecureMode = APPS_SCRIPT_URL && SECRET_KEY;
-
     if (!window.Papa) {
         throw new Error("CSV Parser (PapaParse) not loaded");
     }
 
-    // --- FALLBACK MODE ---
-    if (!useSecureMode) {
-        console.warn("Secure configuration (VITE_APPS_SCRIPT_URL) missing. Falling back to public dataset.");
-        return new Promise((resolve, reject) => {
-            window.Papa.parse(BACKUP_CSV_URL, {
-                download: true,
-                header: false,
-                skipEmptyLines: false,
-                complete: (results: any) => {
-                    try {
-                        const data = processParsedData(results.data);
-                        resolve(data);
-                    } catch (e) {
-                        console.error("Backup Data Processing Error", e);
-                        reject(e);
-                    }
-                },
-                error: (err: any) => {
-                    console.error("Backup CSV Parse Error", err);
-                    reject(err);
-                }
-            });
-        });
-    }
-
-    // --- SECURE MODE ---
-    try {
-        const url = new URL(APPS_SCRIPT_URL);
-        url.searchParams.append('secret', SECRET_KEY);
-        url.searchParams.append('t', String(Date.now()));
-
-        const response = await fetch(url.toString());
-        
-        if (!response.ok) {
-            throw new Error(`Failed to connect to secure source: ${response.statusText}`);
-        }
-
-        const csvText = await response.text();
-
-        // Handle Script Errors (e.g., Wrong Secret)
-        if (csvText.trim().startsWith("Error:")) {
-            throw new Error(csvText);
-        }
-
+    // Helper: Parse CSV text into AppData
+    const parseData = (csvText: string): Promise<AppData> => {
         return new Promise((resolve, reject) => {
             window.Papa.parse(csvText, {
                 header: false,
@@ -68,20 +22,55 @@ export const fetchPrayerTimes = async (): Promise<AppData> => {
                         const data = processParsedData(results.data);
                         resolve(data);
                     } catch (e) {
-                        console.error("Secure Data Processing Error", e);
                         reject(e);
                     }
                 },
-                error: (err: any) => {
-                    console.error("Secure CSV Parse Error", err);
-                    reject(err);
-                }
+                error: (err: any) => reject(err)
             });
         });
+    };
 
-    } catch (error) {
-        console.error("Fetch error:", error);
-        throw error;
+    // 1. Try Primary Source (Apps Script)
+    try {
+        const url = new URL(APPS_SCRIPT_URL);
+        url.searchParams.append('secret', SECRET_KEY);
+        url.searchParams.append('t', String(Date.now()));
+
+        const response = await fetch(url.toString(), {
+            redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Apps Script Status: ${response.status}`);
+        }
+
+        const csvText = await response.text();
+
+        // Handle Script-level errors
+        if (csvText.trim().startsWith("Error:")) {
+            throw new Error(csvText);
+        }
+
+        return await parseData(csvText);
+
+    } catch (primaryError) {
+        console.warn("Primary source failed, attempting fallback...", primaryError);
+
+        // 2. Try Fallback Source (Direct CSV)
+        // try {
+        //     const response = await fetch(DIRECT_CSV_URL);
+            
+        //     if (!response.ok) {
+        //         throw new Error(`Fallback Status: ${response.status}`);
+        //     }
+
+        //     const csvText = await response.text();
+        //     return await parseData(csvText);
+
+        // } catch (fallbackError) {
+        //     console.error("All data sources failed.");
+        //     throw new Error("Failed to fetch prayer times. Please check your internet connection.");
+        // }
     }
 };
 
