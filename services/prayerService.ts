@@ -74,6 +74,7 @@ export const fetchPrayerTimes = async (): Promise<AppData> => {
         //     // Throw a unified error for the UI to catch
         //     throw new Error("Unable to load prayer times. Please check your internet connection.");
         // }
+        throw primaryError;
     }
 };
 
