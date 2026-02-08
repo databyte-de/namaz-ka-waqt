@@ -4,7 +4,7 @@ import { AppData, Mosque, PrayerContext } from '../types';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwYQE9d0cQEkusPsXqlMpRF7puGHMwKRAeTTxXtBuJbCCMHSVIJyKA5s683jqpvF2wY/exec';
 const SECRET_KEY = 'U%A9*oTd4gyUW$qzSyJL';
 // Fallback: Direct Google Sheet CSV (Robust against CORS/Script errors)
-const DIRECT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
+// const DIRECT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
     if (!window.Papa) {
@@ -59,21 +59,21 @@ export const fetchPrayerTimes = async (): Promise<AppData> => {
         console.warn("Primary source failed, attempting fallback...", primaryError);
 
         // 2. Try Fallback Source (Direct CSV)
-        try {
-            const response = await fetch(DIRECT_CSV_URL);
+        // try {
+        //     const response = await fetch(DIRECT_CSV_URL);
             
-            if (!response.ok) {
-                throw new Error(`Fallback Status: ${response.status}`);
-            }
+        //     if (!response.ok) {
+        //         throw new Error(`Fallback Status: ${response.status}`);
+        //     }
 
-            const csvText = await response.text();
-            return await parseData(csvText);
+        //     const csvText = await response.text();
+        //     return await parseData(csvText);
 
-        } catch (fallbackError) {
-            console.error("All data sources failed.", fallbackError);
-            // Throw a unified error for the UI to catch
-            throw new Error("Unable to load prayer times. Please check your internet connection.");
-        }
+        // } catch (fallbackError) {
+        //     console.error("All data sources failed.", fallbackError);
+        //     // Throw a unified error for the UI to catch
+        //     throw new Error("Unable to load prayer times. Please check your internet connection.");
+        // }
     }
 };
 
