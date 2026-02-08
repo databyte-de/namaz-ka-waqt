@@ -12,48 +12,59 @@ A modern, responsive web dashboard for displaying local prayer times, dynamicall
 *   **Footer Notes**: Automatically detects and displays important announcements/notes from the bottom of the spreadsheet.
 *   **Responsive Design**: Optimized for both mobile phones and desktop screens.
 
-## 🚀 How to Launch the App (Locally)
+## 🚀 How to Launch the App
 
-To run this application on your computer, you need a local web server.
+Since this is a modern React application using TypeScript, you have two options to run it:
 
-### Method 1: VS Code Live Server (Recommended)
-1.  Open the project folder in **VS Code**.
-2.  Install the **Live Server** extension (by Ritwick Dey).
-3.  Right-click on `index.html` and select **"Open with Live Server"**.
-4.  The app will open automatically in your browser.
+### Option 1: Development Mode (Node.js) - Recommended
+Use this if you want to edit code and see changes instantly.
 
-### Method 2: Node.js
-1.  Open your terminal in the project folder.
-2.  Run `npx serve`.
-3.  Open the URL shown (usually `http://localhost:3000`).
+1.  **Install Node.js**: Download from [nodejs.org](https://nodejs.org/).
+2.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Start the Server**:
+    ```bash
+    npm run dev
+    ```
+4.  **Open in Browser**: Visit the URL shown in terminal (usually `http://localhost:5173`).
 
-### Method 3: Python
-1.  Open your terminal in the project folder.
-2.  Run `python -m http.server`.
-3.  Open `http://localhost:8000`.
+### Option 2: Production Preview (Python)
+Use this if you just want to run the app locally using Python. **Note: You must build the app first.**
+
+1.  **Build the App**:
+    ```bash
+    npm install   # (If not already installed)
+    npm run build # This creates a 'dist' folder with the final files
+    ```
+2.  **Navigate to Build Folder**:
+    ```bash
+    cd dist
+    ```
+3.  **Start Python Server**:
+    ```bash
+    python3 -m http.server
+    ```
+4.  **Open in Browser**: Visit `http://localhost:8000`.
+
+*Why didn't it work before?*
+Browsers cannot read `.tsx` (TypeScript) files directly. The `npm run build` command converts them into standard HTML/JS that Python can serve.
 
 ## 🌐 Making it Public (Deployment)
 
 To share the app with others, you can host it for free using these popular services.
 
 ### Option 1: Netlify Drop (Easiest)
-1.  Go to [Netlify Drop](https://app.netlify.com/drop).
-2.  Drag and drop your project folder onto the page.
-3.  Netlify will upload the files and provide you with a public URL (e.g., `https://calm-sunrise-123456.netlify.app`) instantly.
+1.  Run `npm run build` in your terminal. This creates a `dist` folder.
+2.  Go to [Netlify Drop](https://app.netlify.com/drop).
+3.  Drag and drop the **`dist`** folder onto the page.
 
 ### Option 2: Vercel
 1.  Install the Vercel CLI: `npm i -g vercel`.
 2.  Run the command `vercel` in your project folder.
 3.  Follow the prompts (accept defaults).
 4.  Vercel will build and deploy your site.
-
-### Option 3: GitHub Pages
-1.  Upload your code to a GitHub repository.
-2.  Go to **Settings** > **Pages**.
-3.  Under **Build and deployment**, select **Source** as `Deploy from a branch`.
-4.  Select your branch (usually `main`) and save.
-
-*Note: Since this project uses React with TypeScript, ensure your hosting environment is configured to serve the files correctly. For a production-grade deployment, we recommended using a build tool like Vite.*
 
 ## ⚙️ Configuration
 
@@ -89,7 +100,7 @@ The application expects the Google Sheet to follow a specific structure:
 
 ## 🛠️ Tech Stack
 
-*   **Frontend**: React 19
+*   **Frontend**: React 19, Vite
 *   **Styling**: Tailwind CSS
 *   **Icons**: Lucide React
 *   **Data Parsing**: PapaParse
