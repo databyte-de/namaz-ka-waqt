@@ -1,62 +1,79 @@
 import { AppData, Mosque, PrayerContext } from '../types';
 
-// Access environment variables
-const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
+// Access environment variables safely
+const APPS_SCRIPT_URL = import.meta.env?.VITE_APPS_SCRIPT_URL;
+const SECRET_KEY = import.meta.env?.VITE_SECRET_KEY;
+
+// Fallback URL (Public Google Sheet CSV) for when secrets are not configured
+const BACKUP_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
-    // 1. CONFIGURATION CHECK
-    if (!APPS_SCRIPT_URL || !SECRET_KEY) {
-        console.error("Missing Configuration: VITE_APPS_SCRIPT_URL or VITE_SECRET_KEY not found.");
-        // If you are running locally, make sure you have a .env file.
-        // If deploying, make sure secrets are set in GitHub Actions.
-        throw new Error("System configuration error: Credentials missing.");
+    // Check if secure configuration exists
+    const useSecureMode = APPS_SCRIPT_URL && SECRET_KEY;
+
+    if (!window.Papa) {
+        throw new Error("CSV Parser (PapaParse) not loaded");
     }
 
-    try {
-        // 2. CONSTRUCT SECURE URL
-        const url = new URL(APPS_SCRIPT_URL);
-        // The Apps Script expects a parameter named 'secret'
-        url.searchParams.append('secret', SECRET_KEY);
-        // Add timestamp to prevent browser caching
-        url.searchParams.append('t', String(Date.now()));
-
-        // 3. FETCH DATA
-        const response = await fetch(url.toString());
-        
-        if (!response.ok) {
-            throw new Error(`Failed to connect to data source: ${response.statusText}`);
-        }
-
-        const csvText = await response.text();
-
-        // 4. HANDLE SCRIPT ERRORS
-        // The script returns "Error: ..." as plain text if the secret is wrong
-        if (csvText.trim().startsWith("Error:")) {
-            throw new Error(csvText);
-        }
-
-        // 5. PARSE CSV
+    // --- FALLBACK MODE ---
+    if (!useSecureMode) {
+        console.warn("Secure configuration (VITE_APPS_SCRIPT_URL) missing. Falling back to public dataset.");
         return new Promise((resolve, reject) => {
-            if (!window.Papa) {
-                reject(new Error("CSV Parser (PapaParse) not loaded"));
-                return;
-            }
-
-            window.Papa.parse(csvText, {
+            window.Papa.parse(BACKUP_CSV_URL, {
+                download: true,
                 header: false,
-                skipEmptyLines: false, // We keep empty lines to detect section breaks
+                skipEmptyLines: false,
                 complete: (results: any) => {
                     try {
                         const data = processParsedData(results.data);
                         resolve(data);
                     } catch (e) {
-                        console.error("Data Processing Error", e);
+                        console.error("Backup Data Processing Error", e);
                         reject(e);
                     }
                 },
                 error: (err: any) => {
-                    console.error("CSV Parse Error", err);
+                    console.error("Backup CSV Parse Error", err);
+                    reject(err);
+                }
+            });
+        });
+    }
+
+    // --- SECURE MODE ---
+    try {
+        const url = new URL(APPS_SCRIPT_URL);
+        url.searchParams.append('secret', SECRET_KEY);
+        url.searchParams.append('t', String(Date.now()));
+
+        const response = await fetch(url.toString());
+        
+        if (!response.ok) {
+            throw new Error(`Failed to connect to secure source: ${response.statusText}`);
+        }
+
+        const csvText = await response.text();
+
+        // Handle Script Errors (e.g., Wrong Secret)
+        if (csvText.trim().startsWith("Error:")) {
+            throw new Error(csvText);
+        }
+
+        return new Promise((resolve, reject) => {
+            window.Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: false,
+                complete: (results: any) => {
+                    try {
+                        const data = processParsedData(results.data);
+                        resolve(data);
+                    } catch (e) {
+                        console.error("Secure Data Processing Error", e);
+                        reject(e);
+                    }
+                },
+                error: (err: any) => {
+                    console.error("Secure CSV Parse Error", err);
                     reject(err);
                 }
             });
