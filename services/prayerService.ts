@@ -1,6 +1,6 @@
 import { AppData, Mosque, PrayerContext } from '../types';
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw5_YHnfGjRyT5AhvMjYN7G7ODch9KPv4cSL7JFnl4Rkz5yoF3cOEmgGoQRvLpvlCUqIjQ5q5kLnTT/pub?gid=1868609533&single=true&output=csv";
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
     try {
