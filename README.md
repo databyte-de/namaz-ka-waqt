@@ -48,23 +48,29 @@ Use this if you just want to run the app locally using Python. **Note: You must 
     ```
 4.  **Open in Browser**: Visit `http://localhost:8000`.
 
-*Why didn't it work before?*
-Browsers cannot read `.tsx` (TypeScript) files directly. The `npm run build` command converts them into standard HTML/JS that Python can serve.
+## 🌐 Making it Public (GitHub Pages)
 
-## 🌐 Making it Public (Deployment)
+To fix the blank page issue and deploy correctly, follow these steps:
 
-To share the app with others, you can host it for free using these popular services.
+1.  **Install Dependencies**:
+    Run this command in your terminal to install the deployment tool:
+    ```bash
+    npm install
+    ```
 
-### Option 1: Netlify Drop (Easiest)
-1.  Run `npm run build` in your terminal. This creates a `dist` folder.
-2.  Go to [Netlify Drop](https://app.netlify.com/drop).
-3.  Drag and drop the **`dist`** folder onto the page.
+2.  **Deploy**:
+    Run this command. It will automatically build your app and upload the correct files to GitHub.
+    ```bash
+    npm run deploy
+    ```
 
-### Option 2: Vercel
-1.  Install the Vercel CLI: `npm i -g vercel`.
-2.  Run the command `vercel` in your project folder.
-3.  Follow the prompts (accept defaults).
-4.  Vercel will build and deploy your site.
+3.  **Configure GitHub**:
+    *   Go to your repository on GitHub.
+    *   Click **Settings** > **Pages**.
+    *   Under **Build and deployment** > **Branch**, ensure **`gh-pages`** is selected (Note: This branch is created automatically by the previous step).
+    *   Click **Save**.
+
+Wait a minute or two, refresh your site, and it should work!
 
 ## ⚙️ Configuration
 
