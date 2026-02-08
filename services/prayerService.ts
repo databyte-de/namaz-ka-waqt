@@ -1,58 +1,79 @@
 import { AppData, Mosque, PrayerContext } from '../types';
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRw5_YHnfGjRyT5AhvMjYN7G7ODch9KPv4cSL7JFnl4Rkz5yoF3cOEmgGoQRvLpvlCUqIjQ5q5kLnTT/pub?gid=1868609533&single=true&output=csv";
+// Access environment variables
+const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
+    // 1. CONFIGURATION CHECK
+    if (!APPS_SCRIPT_URL || !SECRET_KEY) {
+        console.error("Missing Configuration: VITE_APPS_SCRIPT_URL or VITE_SECRET_KEY not found.");
+        // If you are running locally, make sure you have a .env file.
+        // If deploying, make sure secrets are set in GitHub Actions.
+        throw new Error("System configuration error: Credentials missing.");
+    }
+
     try {
-        // Append timestamp to prevent caching from Google Sheets or Browser
-        const cacheBuster = `&t=${Date.now()}`;
-        const response = await fetch(CSV_URL + cacheBuster, {
-            cache: 'no-store',
-            headers: {
-                'Pragma': 'no-cache',
-                'Cache-Control': 'no-cache'
-            }
-        });
+        // 2. CONSTRUCT SECURE URL
+        const url = new URL(APPS_SCRIPT_URL);
+        // The Apps Script expects a parameter named 'secret'
+        url.searchParams.append('secret', SECRET_KEY);
+        // Add timestamp to prevent browser caching
+        url.searchParams.append('t', String(Date.now()));
+
+        // 3. FETCH DATA
+        const response = await fetch(url.toString());
         
         if (!response.ok) {
-            throw new Error(`Failed to fetch CSV: ${response.statusText}`);
+            throw new Error(`Failed to connect to data source: ${response.statusText}`);
         }
+
         const csvText = await response.text();
 
+        // 4. HANDLE SCRIPT ERRORS
+        // The script returns "Error: ..." as plain text if the secret is wrong
+        if (csvText.trim().startsWith("Error:")) {
+            throw new Error(csvText);
+        }
+
+        // 5. PARSE CSV
         return new Promise((resolve, reject) => {
             if (!window.Papa) {
-                reject(new Error("PapaParse not loaded"));
+                reject(new Error("CSV Parser (PapaParse) not loaded"));
                 return;
             }
 
             window.Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: false, // We keep empty lines to detect section breaks
                 complete: (results: any) => {
                     try {
                         const data = processParsedData(results.data);
                         resolve(data);
                     } catch (e) {
+                        console.error("Data Processing Error", e);
                         reject(e);
                     }
                 },
                 error: (err: any) => {
+                    console.error("CSV Parse Error", err);
                     reject(err);
                 }
             });
         });
 
     } catch (error) {
-        console.error("Error fetching prayer times:", error);
+        console.error("Fetch error:", error);
         throw error;
     }
 };
 
 const processParsedData = (rows: any[][]): AppData => {
-    if (rows.length < 3) {
-        throw new Error("CSV data is too short");
+    if (!rows || rows.length < 3) {
+        throw new Error("Data is too short or empty");
     }
 
     // 1. EXTRACT CONTEXT (Headers are at Index 1)
-    // Python: df.iloc[1, 1], etc.
     const headerRow = rows[1];
     
     const getLabel = (text: any) => {
@@ -69,27 +90,27 @@ const processParsedData = (rows: any[][]): AppData => {
         juma: getLabel(headerRow[5])
     };
 
+    // Row 0 usually contains the Last Updated Date in the first cell
     const last_updated = rows[0][0] ? String(rows[0][0]) : undefined;
 
     // 2. PROCESS ROWS
-    // Python drops 0 and 1, starts iterating.
     const processed_data: Mosque[] = [];
     const footer_data: string[] = [];
     let current_area = "General";
     let is_main_table = true;
 
-    // Start from index 2
+    // Start from index 2 (after date and headers)
     for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
         
         // Safety check for empty trailing rows
-        if (row.length === 0) continue;
+        if (!row || row.length === 0) continue;
 
         const first_col_text = row[0] ? String(row[0]).trim() : "";
         const first_col_lower = first_col_text.toLowerCase();
 
         // --- CIRCUIT BREAKER ---
-        // Enhanced detection for "Note:", "Notes", "Note", etc.
+        // If we hit "Note:", we switch to footer mode
         if (first_col_lower.includes("note:") || first_col_lower === "note" || first_col_lower === "notes") {
             is_main_table = false;
         }
@@ -108,7 +129,11 @@ const processParsedData = (rows: any[][]): AppData => {
         }
 
         // --- MODE 2: MOSQUE PROCESSING ---
-        const cleanTime = (val: any) => (val && String(val).trim() !== "" && String(val).trim() !== "nan") ? String(val).trim() : "";
+        const cleanTime = (val: any) => {
+            if (!val) return "";
+            const s = String(val).trim();
+            return (s === 'nan' || s === '') ? "" : s;
+        };
 
         const fajr = cleanTime(row[1]);
         const zuhar = cleanTime(row[2]);
@@ -122,7 +147,7 @@ const processParsedData = (rows: any[][]): AppData => {
         // Skip completely empty rows
         if (!first_col_text && !has_any_time) continue;
 
-        // Area Header Logic
+        // Area Header Logic (Name exists, but NO times)
         if (first_col_text && !has_any_time) {
             current_area = first_col_text;
             continue;
