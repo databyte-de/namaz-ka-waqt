@@ -1,0 +1,4 @@
+{
+  "name": "Namaz Ka Waqt",
+  "description": "A dashboard displaying prayer times for local mosques fetched dynamically from a Google Sheet."
+}
