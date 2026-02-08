@@ -24,8 +24,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: 'npm'
-      # We use npm install instead of npm ci because you might not have a package-lock.json yet
+          # Removed cache: 'npm' because package-lock.json is missing
+          
       - name: Install dependencies
         run: npm install
       - name: Build
