@@ -37,11 +37,13 @@ export const fetchPrayerTimes = async (): Promise<AppData> => {
         url.searchParams.append('t', String(Date.now()));
 
         const response = await fetch(url.toString(), {
+            method: 'GET',
+            credentials: 'omit', // Fixes CORS issues with Google Auth redirects
             redirect: 'follow'
         });
         
         if (!response.ok) {
-            throw new Error(`Apps Script Status: ${response.status}`);
+            throw new Error(`Apps Script Status: ${response.status} ${response.statusText}`);
         }
 
         const csvText = await response.text();
@@ -53,24 +55,25 @@ export const fetchPrayerTimes = async (): Promise<AppData> => {
 
         return await parseData(csvText);
 
-    } catch (primaryError) {
+    } catch (primaryError: any) {
         console.warn("Primary source failed, attempting fallback...", primaryError);
 
         // 2. Try Fallback Source (Direct CSV)
-        // try {
-        //     const response = await fetch(DIRECT_CSV_URL);
+        try {
+            const response = await fetch(DIRECT_CSV_URL);
             
-        //     if (!response.ok) {
-        //         throw new Error(`Fallback Status: ${response.status}`);
-        //     }
+            if (!response.ok) {
+                throw new Error(`Fallback Status: ${response.status}`);
+            }
 
-        //     const csvText = await response.text();
-        //     return await parseData(csvText);
+            const csvText = await response.text();
+            return await parseData(csvText);
 
-        // } catch (fallbackError) {
-        //     console.error("All data sources failed.");
-        //     throw new Error("Failed to fetch prayer times. Please check your internet connection.");
-        // }
+        } catch (fallbackError) {
+            console.error("All data sources failed.", fallbackError);
+            // Throw a unified error for the UI to catch
+            throw new Error("Unable to load prayer times. Please check your internet connection.");
+        }
     }
 };
 
