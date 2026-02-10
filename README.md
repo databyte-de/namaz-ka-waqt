@@ -1,16 +1,17 @@
 # Namaz Ka Waqt
 
-A modern, responsive web dashboard for displaying local prayer times, dynamically fetched from a Google Sheet.
+A modern, responsive web dashboard for displaying local prayer times, dynamically fetched from a private Google Sheet via a secure Apps Script proxy.
 
 ## 🌟 Features
 
-*   **Live Data Sync**: Fetches prayer times directly from a published Google Sheet CSV.
-*   **Smart Filtering**: Filter mosques by Area or specific Mosque Name.
-*   **Grouped Display**: Automatically organizes mosques by their geographic area.
-*   **Manual Refresh**: A refresh button to pull the latest data immediately, with visual feedback (Toast notifications).
-*   **Urdu Support**: Native support for Urdu typography using the *Noto Nastaliq Urdu* font.
-*   **Footer Notes**: Automatically detects and displays important announcements/notes from the bottom of the spreadsheet.
-*   **Responsive Design**: Optimized for both mobile phones and desktop screens.
+* **Secure Data Fetching**: Uses a Google Apps Script proxy with a secret token to fetch data securely without exposing the sheet publicly.
+* **Live Data Sync**: Updates automatically when the Google Sheet is edited.
+* **Smart Filtering**: Filter mosques by Area or specific Mosque Name.
+* **Grouped Display**: Automatically organizes mosques by their geographic area.
+* **Manual Refresh**: A refresh button to pull the latest data immediately, with visual feedback (Toast notifications).
+* **Urdu Support**: Native support for Urdu typography using the *Noto Nastaliq Urdu* font.
+* **Footer Notes**: Automatically detects and displays important announcements/notes from the bottom of the spreadsheet.
+* **Responsive Design**: Optimized for both mobile phones and desktop screens.
 
 ## 🚀 How to Launch the App
 
@@ -30,65 +31,89 @@ Use this if you want to edit code and see changes instantly.
     ```
 4.  **Open in Browser**: Visit the URL shown in terminal (usually `http://localhost:5173`).
 
-### Option 2: Production Preview (Python)
-Use this if you just want to run the app locally using Python. **Note: You must build the app first.**
+### Option 2: Production Preview
+Use this to test the final build locally.
 
 1.  **Build the App**:
     ```bash
-    npm install   # (If not already installed)
-    npm run build # This creates a 'dist' folder with the final files
+    npm run build
     ```
-2.  **Navigate to Build Folder**:
+2.  **Preview**:
     ```bash
-    cd dist
-    ```
-3.  **Start Python Server**:
-    ```bash
-    python3 -m http.server
-    ```
-4.  **Open in Browser**: Visit `http://localhost:8000`.
-
-## 🌐 Making it Public (GitHub Pages)
-
-To fix the blank page issue and deploy correctly, follow these steps:
-
-1.  **Install Dependencies**:
-    Run this command in your terminal to install the deployment tool:
-    ```bash
-    npm install
+    npm run preview
     ```
 
-2.  **Deploy**:
-    Run this command. It will automatically build your app and upload the correct files to GitHub.
+## 🌐 Deployment (GitHub Pages)
+
+To deploy this app to the web for free:
+
+1.  **Deploy Command**:
+    Run this command. It will automatically build your app and upload the correct files to the `gh-pages` branch.
     ```bash
     npm run deploy
     ```
 
-3.  **Configure GitHub**:
-    *   Go to your repository on GitHub.
-    *   Click **Settings** > **Pages**.
-    *   Under **Build and deployment** > **Branch**, ensure **`gh-pages`** is selected (Note: This branch is created automatically by the previous step).
-    *   Click **Save**.
+2.  **Configure GitHub**:
+    * Go to your repository on GitHub.
+    * Click **Settings** > **Pages**.
+    * Under **Build and deployment** > **Branch**, ensure **`gh-pages`** is selected.
+    * Click **Save**.
 
-Wait a minute or two, refresh your site, and it should work!
+## ⚙️ Configuration (Google Sheets Backend)
 
-## ⚙️ Configuration
+This app uses a **Google Apps Script** to turn your private sheet into a secure JSON/CSV API.
 
-### Changing the Data Source (Google Sheet)
-To connect the app to your own Google Sheet:
+### Step 1: Prepare the Google Sheet
+Ensure your sheet follows the [Data Structure](#-data-structure) below.
 
-1.  **Prepare the Sheet**: Ensure your sheet follows the [Data Structure](#-data-structure).
-2.  **Publish to Web**:
-    *   Open your Google Sheet.
-    *   Go to **File** > **Share** > **Publish to web**.
-    *   Select **Entire Document** and change format to **Comma-separated values (.csv)**.
-    *   Click **Publish** and copy the link.
-3.  **Update the Code**:
-    *   Open `services/prayerService.ts`.
-    *   Replace the `CSV_URL` constant with your new link:
-    ```typescript
-    const CSV_URL = "YOUR_NEW_CSV_LINK_HERE";
-    ```
+### Step 2: Create the API Script
+1.  Open your Google Sheet.
+2.  Go to **Extensions** > **Apps Script**.
+3.  Paste the following code into `Code.gs`:
+
+```javascript
+function doGet(e) {
+  // SECURITY: Change this secret to something unique
+  if (e.parameter.secret !== 'YOUR_SECRET_KEY_HERE') {
+    return ContentService.createTextOutput("Error: Access Denied. Wrong Secret.")
+      .setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  
+  // CRITICAL: Use getDisplayValues() to get "06:20" text, avoiding Date object conversion issues
+  var data = sheet.getDataRange().getDisplayValues();
+
+  // Convert 2D Array to CSV format manually
+  var csvString = data.map(function(row) {
+    return row.map(function(cell) {
+      var cellText = cell.toString();
+      cellText = cellText.replace(/"/g, '""');
+      if (cellText.search(/("|,|\n)/g) >= 0) {
+        cellText = '"' + cellText + '"';
+      }
+      return cellText;
+    }).join(",");
+  }).join("\n");
+
+  return ContentService.createTextOutput(csvString)
+    .setMimeType(ContentService.MimeType.CSV);
+}
+
+### Step 3: Deploy the Script (Critical!)
+1. Click the blue Deploy button > New deployment.
+2. Select type: Web app.
+3. Description: Prayer API v1
+4 .Execute as: Me (Your email).
+5. Who has access: Anyone (Important: This avoids CORS errors).
+6. Click Deploy and copy the Web App URL.
+
+###Step 4: Connect to Frontend
+Open services/prayerService.ts and update the configuration:
+
+TypeScript
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+const SECRET_KEY = 'YOUR_SECRET_KEY_HERE';
 
 ## 📊 Data Structure
 
