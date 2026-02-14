@@ -4,7 +4,7 @@ import { AppData, Mosque } from './types';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { MosqueCard } from './components/MosqueCard';
 import { FooterNotes } from './components/FooterNotes';
-import { MapPin, Moon, Filter, ChevronDown, Landmark, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Moon, Filter, ChevronDown, Landmark, RefreshCw, CheckCircle, AlertCircle, Search } from 'lucide-react';
 
 // Simple Toast Component
 const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () => void }> = ({ message, type, onClose }) => (
@@ -26,6 +26,7 @@ const App: React.FC = () => {
   // Filter States
   const [selectedArea, setSelectedArea] = useState('All Areas');
   const [selectedMosque, setSelectedMosque] = useState('All Mosques');
+  const [searchQuery, setSearchQuery] = useState(''); // <--- NEW SEARCH STATE
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -103,7 +104,13 @@ const App: React.FC = () => {
       // Mosque Filter Logic
       const matchesMosque = selectedMosque === 'All Mosques' || m.name_en === selectedMosque;
 
-      if (matchesArea && matchesMosque) {
+      // Search Filter Logic (New)
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === '' || 
+                            m.name_en.toLowerCase().includes(searchLower) || 
+                            m.name_ur.includes(searchQuery);
+
+      if (matchesArea && matchesMosque && matchesSearch) {
         if (!grouped[m.area]) {
           grouped[m.area] = [];
         }
@@ -112,7 +119,7 @@ const App: React.FC = () => {
     });
 
     return grouped;
-  }, [data, selectedArea, selectedMosque]);
+  }, [data, selectedArea, selectedMosque, searchQuery]);
 
   if (loading && !data) return <LoadingSpinner />;
 
@@ -152,7 +159,8 @@ const App: React.FC = () => {
                 <Moon className="w-6 h-6 text-emerald-100" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Namaz Ka Waqt</h1>
+                {/* CHANGED HEADER TITLE HERE */}
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Jamaat Ka Waqt</h1>
                 {data?.metadata.last_updated && (
                   <p className="text-emerald-100 text-xs md:text-sm opacity-90">
                     Last updated: {data.metadata.last_updated}
@@ -176,7 +184,7 @@ const App: React.FC = () => {
               </button>
 
               {/* Area Filter Dropdown */}
-              <div className="relative w-full md:w-64 h-[42px]">
+              <div className="relative w-full md:w-48 lg:w-56 h-[42px]">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Filter className="h-5 w-5 text-emerald-200" />
                 </div>
@@ -197,7 +205,7 @@ const App: React.FC = () => {
               </div>
 
               {/* Mosque Filter Dropdown */}
-              <div className="relative w-full md:w-80 h-[42px]">
+              <div className="relative w-full md:w-56 lg:w-64 h-[42px]">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Landmark className="h-5 w-5 text-emerald-200" />
                 </div>
@@ -217,6 +225,20 @@ const App: React.FC = () => {
                 </div>
               </div>
 
+              {/* NEW: Search Input */}
+              <div className="relative w-full md:w-56 lg:w-64 h-[42px]">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-emerald-200" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search mosque..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full h-full pl-10 pr-3 py-2 border border-emerald-600 rounded-lg leading-5 bg-emerald-800/50 text-white placeholder-emerald-200/70 focus:outline-none focus:bg-emerald-900 focus:border-white focus:ring-1 focus:ring-white sm:text-sm transition-colors"
+                />
+              </div>
+
             </div>
           </div>
         </div>
@@ -230,6 +252,7 @@ const App: React.FC = () => {
                 No mosques found 
                 {selectedArea !== 'All Areas' && ` in ${selectedArea}`}
                 {selectedMosque !== 'All Mosques' && ` named "${selectedMosque}"`}
+                {searchQuery && ` matching "${searchQuery}"`}
              </p>
            </div>
         ) : (
