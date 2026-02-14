@@ -2,9 +2,15 @@ import { AppData, Mosque, PrayerContext } from '../types';
 
 // Hardcoded Configuration
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_lwz2aWulsEflBxtolbcZoY_XN6lgyiMr_wBinGG8yX88VbuwHPZ0W1hit6iq62yXmQ/exec';
-const SECRET_KEY = 'U%A9*oTd4gyUW$qzSyJL';
+// const SECRET_KEY = 'U%A9*oTd4gyUW$qzSyJL';
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY || '';
 // Fallback: Direct Google Sheet CSV (Robust against CORS/Script errors)
 // const DIRECT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR8lrQnA-i9RRe81v2dP0SDYbG2Nbj3tMo8lB8B0V2_XlfNn5rN_eITlcbWMGqwOQ/pub?gid=1868609533&single=true&output=csv";
+
+// Validation: Ensure secrets are present
+if (!APPS_SCRIPT_URL || !SECRET_KEY) {
+    console.warn("Missing Configuration: VITE_APPS_SCRIPT_URL or VITE_SECRET_KEY is not set.");
+}
 
 export const fetchPrayerTimes = async (): Promise<AppData> => {
     if (!window.Papa) {
