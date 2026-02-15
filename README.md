@@ -13,4 +13,6 @@ A modern, responsive web dashboard for displaying local prayer times, dynamicall
 * **Footer Notes**: Automatically detects and displays important announcements/notes from the bottom of the spreadsheet.
 * **Responsive Design**: Optimized for both mobile phones and desktop screens.
 
-## 🚀 App : https://databyte-de.github.io/namaz-ka-waqt/
+## 🚀 Production App : https://databyte-de.github.io/namaz-ka-waqt/
+
+## 🚀 Testing App : https://databyte-de.github.io/namaz-ka-waqt/dev/
