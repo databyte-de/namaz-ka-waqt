@@ -2,24 +2,23 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["main", "master", "dev"] # Added 'dev' here
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write # 'write' is required to push to the gh-pages branch
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -27,26 +26,90 @@ jobs:
           
       - name: Install dependencies
         run: npm install
-        
+      
+      # LOGIC: Determine Base Path & Target Folder based on Branch
+      - name: Set Build Options
+        id: vars
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "BUILDING FOR DEV..."
+            echo "base_path=/namaz-ka-waqt/dev/" >> $GITHUB_OUTPUT
+            echo "target_folder=dev" >> $GITHUB_OUTPUT
+            echo "clean_exclude=" >> $GITHUB_OUTPUT
+          else
+            echo "BUILDING FOR PROD..."
+            echo "base_path=/namaz-ka-waqt/" >> $GITHUB_OUTPUT
+            echo "target_folder=." >> $GITHUB_OUTPUT
+            # When deploying prod, DO NOT delete the 'dev' folder
+            echo "clean_exclude=dev" >> $GITHUB_OUTPUT
+          fi
+
+      # BUILD: Pass the dynamic base path to Vite
       - name: Build
-        run: npm run build
+        run: npm run build -- --base=${{ steps.vars.outputs.base_path }}
         env:
-          # Inject the secrets from GitHub Settings into the Vite build
           VITE_APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
           VITE_SECRET_KEY: ${{ secrets.SECRET_KEY }}
           
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
+      # DEPLOY: Use JamesIves action to handle folder management
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          target-folder: ${{ steps.vars.outputs.target_folder }}
+          clean: true
+          clean-exclude: ${{ steps.vars.outputs.clean_exclude }}
+
+# name: Deploy to GitHub Pages
+
+# on:
+#   push:
+#     branches: ["main", "master"]
+#   workflow_dispatch:
+
+# permissions:
+#   contents: read
+#   pages: write
+#   id-token: write
+
+# concurrency:
+#   group: "pages"
+#   cancel-in-progress: false
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Setup Node
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: "20"
+          
+#       - name: Install dependencies
+#         run: npm install
+        
+#       - name: Build
+#         run: npm run build
+#         env:
+#           # Inject the secrets from GitHub Settings into the Vite build
+#           VITE_APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+#           VITE_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          
+#       - name: Upload artifact
+#         uses: actions/upload-pages-artifact@v3
+#         with:
+#           path: ./dist
+
+#   deploy:
+#     environment:
+#       name: github-pages
+#       url: ${{ steps.deployment.outputs.page_url }}
+#     needs: build
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Deploy to GitHub Pages
+#         id: deployment
+#         uses: actions/deploy-pages@v4
