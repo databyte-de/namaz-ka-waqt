@@ -48,8 +48,9 @@ jobs:
       - name: Build
         run: npm run build -- --base=${{ steps.vars.outputs.base_path }}
         env:
-          VITE_APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
-          VITE_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          # Logic: IF branch is 'dev' use DEV_ secrets, ELSE use PROD_ secrets
+          VITE_APPS_SCRIPT_URL: ${{ github.ref == 'refs/heads/dev' && secrets.DEV_APPS_SCRIPT_URL || secrets.PROD_APPS_SCRIPT_URL }}
+          VITE_SECRET_KEY: ${{ github.ref == 'refs/heads/dev' && secrets.DEV_SECRET_KEY || secrets.PROD_SECRET_KEY }}
           
       # DEPLOY: Use JamesIves action to handle folder management
       - name: Deploy to GitHub Pages
